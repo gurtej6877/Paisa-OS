@@ -6,6 +6,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Formats numbers into Indian Rupees (₹)
+export function formatINR(amount: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0, 
+  }).format(amount)
+}
+
 // Regex engine to parse natural language financial inputs
 export function parseNaturalLanguageExpense(input: string) {
   // Extract the first consecutive sequence of numbers as the amount
@@ -25,7 +34,7 @@ export function parseNaturalLanguageExpense(input: string) {
   }
 
   // Fallback category routing rules
-  let category = 'Others'
+  let category = 'Other'
   const lowerText = cleanText.toLowerCase()
   if (
     lowerText.includes('food') || 
@@ -36,7 +45,7 @@ export function parseNaturalLanguageExpense(input: string) {
     lowerText.includes('cafe') ||
     lowerText.includes('mcd')
   ) {
-    category = 'Food & Dining'
+    category = 'Food'
   } else if (
     lowerText.includes('cab') || 
     lowerText.includes('auto') || 
@@ -54,7 +63,7 @@ export function parseNaturalLanguageExpense(input: string) {
     lowerText.includes('wifi') ||
     lowerText.includes('recharge')
   ) {
-    category = 'Bills & Utilities'
+    category = 'Bills'
   } else if (
     lowerText.includes('movie') || 
     lowerText.includes('netflix') || 
