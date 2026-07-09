@@ -1,55 +1,73 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+// Utility helper to safely merge Tailwind CSS classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// FORMATTING: Uses standard en-IN locale for Indian Rupee formatting
-// Elaborated Concept: Intl.NumberFormat is extremely fast and native to V8, 
-// ensuring ₹1,00,000 is formatted correctly based on the Indian numbering system.
-export function formatINR(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0, 
-  }).format(amount)
-}
-
+// Regex engine to parse natural language financial inputs
 export function parseNaturalLanguageExpense(input: string) {
-  // Matches "450 dinner", "299 subscription yesterday"
-  const amountMatch = input.match(/^(\d+(?:\.\d+)?)\s+(.*)/);
-  if (!amountMatch) return null;
+  // Extract the first consecutive sequence of numbers as the amount
+  const amountMatch = input.match(/\d+/)
+  const amount = amountMatch ? parseInt(amountMatch[0], 10) : 0
 
-  const amount = parseFloat(amountMatch[1]);
-  let textRemaining = amountMatch[2].toLowerCase();
-  
-  let date = new Date();
-  if (textRemaining.includes('yesterday')) {
-    date.setDate(date.getDate() - 1);
-    textRemaining = textRemaining.replace('yesterday', '').trim();
+  // Strip the numbers out to isolate the item description
+  let cleanText = input.replace(/\d+/, '').trim()
+
+  // Calculate transaction date windows
+  let date = new Date().toISOString().split('T')[0] // Defaults to today
+  if (cleanText.toLowerCase().includes('yesterday')) {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    date = yesterday.toISOString().split('T')[0]
+    cleanText = cleanText.replace(/yesterday/i, '').trim()
   }
 
-  // Basic local categorization keyword mapping
-  const categoryMap: Record<string, string> = {
-    'uber': 'Transport', 'train': 'Transport', 'bus': 'Transport',
-    'dinner': 'Food', 'lunch': 'Food', 'swiggy': 'Food', 'zomato': 'Food', 'coffee': 'Food',
-    'netflix': 'Subscriptions', 'spotify': 'Subscriptions',
-    'gym': 'Fitness', 'clothes': 'Shopping'
-  };
-
-  let category = 'Other';
-  for (const [keyword, cat] of Object.entries(categoryMap)) {
-    if (textRemaining.includes(keyword)) {
-      category = cat;
-      break;
-    }
+  // Fallback category routing rules
+  let category = 'Others'
+  const lowerText = cleanText.toLowerCase()
+  if (
+    lowerText.includes('food') || 
+    lowerText.includes('dinner') || 
+    lowerText.includes('lunch') || 
+    lowerText.includes('swiggy') || 
+    lowerText.includes('zomato') || 
+    lowerText.includes('cafe') ||
+    lowerText.includes('mcd')
+  ) {
+    category = 'Food & Dining'
+  } else if (
+    lowerText.includes('cab') || 
+    lowerText.includes('auto') || 
+    lowerText.includes('metro') || 
+    lowerText.includes('uber') || 
+    lowerText.includes('ola') || 
+    lowerText.includes('petrol') ||
+    lowerText.includes('fuel')
+  ) {
+    category = 'Transport'
+  } else if (
+    lowerText.includes('rent') || 
+    lowerText.includes('bill') || 
+    lowerText.includes('electricity') || 
+    lowerText.includes('wifi') ||
+    lowerText.includes('recharge')
+  ) {
+    category = 'Bills & Utilities'
+  } else if (
+    lowerText.includes('movie') || 
+    lowerText.includes('netflix') || 
+    lowerText.includes('game') ||
+    lowerText.includes('show')
+  ) {
+    category = 'Entertainment'
   }
 
   return {
     amount,
-    description: textRemaining.charAt(0).toUpperCase() + textRemaining.slice(1),
+    description: cleanText || 'Quick Expense',
     category,
-    date: date.toISOString().split('T')[0],
-  };
+    date
+  }
 }
